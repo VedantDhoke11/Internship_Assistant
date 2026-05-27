@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { siteConfig } from '@/lib/config/app';
@@ -26,7 +26,35 @@ export function DynamicIcon({ name, className }: DynamicIconProps) {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
+  const [user, setUser] = React.useState<{ name: string; email: string } | null>(null);
+
+  React.useEffect(() => {
+    const loadUser = () => {
+      try {
+        const stored = window.localStorage.getItem('user');
+        if (stored) {
+          setUser(JSON.parse(stored));
+        }
+      } catch {
+        // Safely ignore failures during SSR
+      }
+    };
+    const handle = setTimeout(loadUser, 0);
+    return () => clearTimeout(handle);
+  }, []);
+
+  const displayName = user?.name || 'John Doe';
+  const displayEmail = user?.email || 'john.doe@university.edu';
+  const displayInitials = user?.name
+    ? user.name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : 'JD';
 
   return (
     <aside
@@ -90,21 +118,22 @@ export function Sidebar() {
       {/* User profile section at the bottom */}
       <div className="border-t border-border p-3">
         <div
+          onClick={() => router.push('/dashboard/settings')}
           className={cn(
             'flex items-center gap-3 rounded-xl hover:bg-accent hover:text-accent-foreground transition-all duration-200 p-2 overflow-hidden cursor-pointer',
             isCollapsed ? 'justify-center' : '',
           )}
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted border border-border font-bold text-sm text-foreground">
-            JD
+            {displayInitials}
           </div>
           {!isCollapsed && (
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-semibold truncate text-foreground leading-none">
-                John Doe
+                {displayName}
               </span>
               <span className="text-xs text-muted-foreground truncate mt-1">
-                john.doe@university.edu
+                {displayEmail}
               </span>
             </div>
           )}

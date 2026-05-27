@@ -57,6 +57,11 @@ export const siteConfig = {
       href: '/dashboard/analytics',
       icon: 'BarChart3',
     },
+    {
+      title: 'Account Settings',
+      href: '/dashboard/settings',
+      icon: 'Settings',
+    },
   ],
 };
 

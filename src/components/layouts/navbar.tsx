@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Sparkles, Menu, X } from 'lucide-react';
+import { Sparkles, Menu, X, LayoutDashboard, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { siteConfig } from '@/lib/config/app';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -12,6 +12,36 @@ import { ThemeToggle } from '@/components/shared/theme-toggle';
 export function Navbar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = React.useState(false);
+  const [user, setUser] = React.useState<{ name: string } | null>(null);
+
+  React.useEffect(() => {
+    const loadSession = () => {
+      try {
+        const stored = window.localStorage.getItem('user');
+        if (stored) {
+          setUser(JSON.parse(stored));
+        } else {
+          setUser(null);
+        }
+      } catch {
+        // Safe SSR check fallback
+      }
+    };
+
+    const handle = setTimeout(loadSession, 0);
+    return () => clearTimeout(handle);
+  }, [pathname]);
+
+  const handleSignOut = () => {
+    try {
+      window.localStorage.removeItem('user');
+      setUser(null);
+      setIsOpen(false);
+      window.location.replace('/');
+    } catch (e) {
+      console.error('Sign out error:', e);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur-md support-[backdrop-filter]:bg-background/60">
@@ -48,22 +78,45 @@ export function Navbar() {
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex items-center gap-3">
             <ThemeToggle />
-            <Link
-              href="/sign-in"
-              className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/sign-up"
-              className={cn(
-                buttonVariants({ size: 'sm' }),
-                'rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-2',
-              )}
-            >
-              <span>Join Platform</span>
-              <Sparkles className="h-4 w-4" />
-            </Link>
+            {user ? (
+              <>
+                <Link
+                  href="/dashboard"
+                  className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'flex items-center gap-1.5')}
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span>Workspace</span>
+                </Link>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSignOut}
+                  className="rounded-xl flex items-center gap-1.5 border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-all font-semibold cursor-pointer"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Sign Out</span>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/sign-in"
+                  className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/sign-up"
+                  className={cn(
+                    buttonVariants({ size: 'sm' }),
+                    'rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-2',
+                  )}
+                >
+                  <span>Join Platform</span>
+                  <Sparkles className="h-4 w-4" />
+                </Link>
+              </>
+            )}
           </div>
 
           <div className="flex sm:hidden items-center gap-2">
@@ -100,23 +153,49 @@ export function Navbar() {
             ))}
             <hr className="my-2 border-border" />
             <div className="flex flex-col gap-2 pt-2">
-              <Link
-                href="/sign-in"
-                onClick={() => setIsOpen(false)}
-                className={cn(
-                  buttonVariants({ variant: 'outline' }),
-                  'w-full justify-center rounded-xl',
-                )}
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/sign-up"
-                onClick={() => setIsOpen(false)}
-                className={cn(buttonVariants({}), 'w-full justify-center rounded-xl')}
-              >
-                Join Platform
-              </Link>
+              {user ? (
+                <>
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setIsOpen(false)}
+                    className={cn(
+                      buttonVariants({ variant: 'outline' }),
+                      'w-full justify-center rounded-xl flex items-center gap-1.5',
+                    )}
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    <span>Workspace</span>
+                  </Link>
+                  <Button
+                    onClick={handleSignOut}
+                    variant="destructive"
+                    className="w-full justify-center rounded-xl flex items-center gap-1.5 font-semibold cursor-pointer"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Sign Out</span>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/sign-in"
+                    onClick={() => setIsOpen(false)}
+                    className={cn(
+                      buttonVariants({ variant: 'outline' }),
+                      'w-full justify-center rounded-xl',
+                    )}
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/sign-up"
+                    onClick={() => setIsOpen(false)}
+                    className={cn(buttonVariants({}), 'w-full justify-center rounded-xl')}
+                  >
+                    Join Platform
+                  </Link>
+                </>
+              )}
             </div>
           </nav>
         </div>

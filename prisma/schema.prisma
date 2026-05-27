@@ -1,0 +1,82 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             String        @id @default(uuid())
+  name           String
+  email          String        @unique
+  passwordHash   String        @map("password_hash")
+  college        String
+  graduationYear Int           @map("graduation_year")
+  branch         String?
+  skills         String[]
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  resumes        Resume[]
+  applications   Application[]
+  aiInsights     AIInsight[]
+
+  @@map("users")
+}
+
+model Resume {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  fileUrl    String   @map("file_url")
+  parsedText String?  @map("parsed_text") @db.Text
+  atsScore   Int?     @map("ats_score")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("resumes")
+}
+
+model Internship {
+  id             String        @id @default(uuid())
+  title          String
+  company        String
+  description    String        @db.Text
+  source         String
+  skillsRequired String[]      @map("skills_required")
+  stipend        String?
+  applyLink      String        @map("apply_link")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  applications   Application[]
+
+  @@map("internships")
+}
+
+model Application {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  internshipId String   @map("internship_id")
+  status       String   // e.g., Saved, Applied, OA, Interview, Rejected, Offer
+  resumeUsed   String?  @map("resume_used")
+  notes        String?  @db.Text
+  appliedAt    DateTime @default(now()) @map("applied_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  internship Internship @relation(fields: [internshipId], references: [id], onDelete: Cascade)
+
+  @@map("applications")
+}
+
+model AIInsight {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  recommendation String   @db.Text
+  generatedAt    DateTime @default(now()) @map("generated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_insights")
+}
