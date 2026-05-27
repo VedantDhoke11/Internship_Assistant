@@ -19,7 +19,7 @@ export default function SettingsPage() {
   React.useEffect(() => {
     const loadSession = () => {
       try {
-        const stored = window.localStorage.getItem('user');
+        const stored = window.sessionStorage.getItem('user');
         if (stored) {
           setUser(JSON.parse(stored));
         }
@@ -34,7 +34,7 @@ export default function SettingsPage() {
 
   const handleSignOut = () => {
     try {
-      window.localStorage.removeItem('user');
+      window.sessionStorage.removeItem('user');
       window.location.replace('/');
     } catch (e) {
       console.error('Sign out error:', e);

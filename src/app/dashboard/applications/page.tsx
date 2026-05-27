@@ -103,7 +103,7 @@ export default function ApplicationTrackerPage() {
   React.useEffect(() => {
     const loadUser = () => {
       try {
-        const stored = window.localStorage.getItem('user');
+        const stored = window.sessionStorage.getItem('user');
         if (stored) {
           const parsed = JSON.parse(stored);
           if (parsed.email) {

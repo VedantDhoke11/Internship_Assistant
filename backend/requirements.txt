@@ -1,0 +1,7 @@
+Flask==3.0.3
+Flask-Cors==4.0.1
+requests==2.32.3
+psycopg2-binary==2.9.9
+pypdf==4.2.0
+python-dotenv==1.0.1
+beautifulsoup4==4.14.3

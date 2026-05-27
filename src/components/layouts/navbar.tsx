@@ -17,7 +17,7 @@ export function Navbar() {
   React.useEffect(() => {
     const loadSession = () => {
       try {
-        const stored = window.localStorage.getItem('user');
+        const stored = window.sessionStorage.getItem('user');
         if (stored) {
           setUser(JSON.parse(stored));
         } else {
@@ -34,7 +34,7 @@ export function Navbar() {
 
   const handleSignOut = () => {
     try {
-      window.localStorage.removeItem('user');
+      window.sessionStorage.removeItem('user');
       setUser(null);
       setIsOpen(false);
       window.location.replace('/');

@@ -33,7 +33,7 @@ export function Sidebar() {
   React.useEffect(() => {
     const loadUser = () => {
       try {
-        const stored = window.localStorage.getItem('user');
+        const stored = window.sessionStorage.getItem('user');
         if (stored) {
           setUser(JSON.parse(stored));
         }

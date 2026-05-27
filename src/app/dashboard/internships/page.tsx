@@ -16,12 +16,47 @@ import {
   CheckCircle2,
   ArrowRight,
   Loader2,
+
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { JobListing } from '@/services/jobs/types';
+
+// ============================================================================
+// ============================================================================
+// PORTAL LINK GENERATORS
+// Each URL includes both the specific job TITLE and COMPANY so the user
+// lands on that exact opportunity when they click the platform button.
+// ============================================================================
+
+
+
+// ============================================================================
+// Source badge colors
+// ============================================================================
+
+const SOURCE_COLORS = {
+  linkedin: {
+    bar: 'bg-blue-600',
+    badge: 'bg-blue-600/10 text-blue-500 border-blue-600/25 hover:bg-blue-600/20',
+    icon: '🔗',
+    label: 'LinkedIn',
+  },
+  internshala: {
+    bar: 'bg-orange-500',
+    badge: 'bg-orange-500/10 text-orange-500 border-orange-500/25 hover:bg-orange-500/20',
+    icon: '📋',
+    label: 'Internshala',
+  },
+  unstop: {
+    bar: 'bg-purple-600',
+    badge: 'bg-purple-600/10 text-purple-500 border-purple-600/25 hover:bg-purple-600/20',
+    icon: '🏆',
+    label: 'Unstop',
+  },
+} as const;
 
 export default function InternshipFeedPage() {
   // State variables
@@ -31,6 +66,9 @@ export default function InternshipFeedPage() {
   const [selectedSource, setSelectedSource] = React.useState<'all' | 'linkedin' | 'internshala' | 'unstop'>('all');
   const [selectedCategory, setSelectedCategory] = React.useState('all');
   const [selectedType, setSelectedType] = React.useState('all');
+  const [page, setPage] = React.useState(1);
+  const [hasMore, setHasMore] = React.useState(true);
+  const [isFetchingMore, setIsFetchingMore] = React.useState(false);
   
   // Active selection for details drawer
   const [selectedJob, setSelectedJob] = React.useState<JobListing | null>(null);
@@ -50,7 +88,7 @@ export default function InternshipFeedPage() {
   React.useEffect(() => {
     const loadUser = () => {
       try {
-        const stored = window.localStorage.getItem('user');
+        const stored = window.sessionStorage.getItem('user');
         if (stored) {
           const parsed = JSON.parse(stored);
           if (parsed.email) {
@@ -101,34 +139,53 @@ export default function InternshipFeedPage() {
   }, [userEmail, fetchUserApplications]);
 
   // Fetch job listings matching source, search, and filters
-  const fetchListings = React.useCallback(async () => {
-    setIsLoading(true);
+  const fetchListings = React.useCallback(async (pageNum: number = 1, append: boolean = false) => {
+    if (pageNum === 1) {
+      setIsLoading(true);
+    } else {
+      setIsFetchingMore(true);
+    }
     try {
       const params = new URLSearchParams();
       if (searchQuery.trim()) params.append('q', searchQuery.trim());
       if (selectedSource !== 'all') params.append('source', selectedSource);
       if (selectedCategory !== 'all') params.append('category', selectedCategory);
       if (selectedType !== 'all') params.append('type', selectedType);
+      params.append('page', pageNum.toString());
 
       const response = await fetch(`/api/internships?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
-        setListings(data.listings || []);
+        const newListings = data.listings || [];
+        if (append) {
+          setListings((prev) => [...prev, ...newListings]);
+        } else {
+          setListings(newListings);
+        }
+        setHasMore(newListings.length >= 10);
       }
     } catch (e) {
       console.error('Error loading listings:', e);
     } finally {
       setIsLoading(false);
+      setIsFetchingMore(false);
     }
   }, [searchQuery, selectedSource, selectedCategory, selectedType]);
 
   // Refetch listings on filter change
   React.useEffect(() => {
+    setPage(1);
     const delayDebounce = setTimeout(() => {
-      fetchListings();
+      fetchListings(1, false);
     }, 300); // debounce API calls for search
     return () => clearTimeout(delayDebounce);
   }, [searchQuery, selectedSource, selectedCategory, selectedType, fetchListings]);
+
+  const loadNextPage = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchListings(nextPage, true);
+  };
 
   // Show Toast Helper
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -204,12 +261,12 @@ export default function InternshipFeedPage() {
             <span>Internship Feed</span>
           </h1>
           <p className="text-muted-foreground mt-1.5 max-w-2xl">
-            Aggregate active openings from LinkedIn, Internshala, and Unstop. Access, filter, and track applications directly from your workspace.
+            Real-time internships aggregated from live job boards. Click <strong>Apply Now</strong> to go directly to the job application, or use the platform buttons to search for this exact role on LinkedIn, Internshala &amp; Unstop.
           </p>
         </div>
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-xs font-semibold text-primary self-start">
           <Sparkles className="h-3.5 w-3.5" />
-          <span>Stage 7 Aggregator Live</span>
+          <span>Live Aggregator</span>
         </div>
       </div>
 
@@ -236,9 +293,9 @@ export default function InternshipFeedPage() {
           >
             <option value="all">All Categories</option>
             <option value="Software Development">Software Development</option>
-            <option value="Data Science & Analytics">Data Science & Analytics</option>
+            <option value="Data Science & Analytics">Data Science &amp; Analytics</option>
             <option value="Product Management">Product Management</option>
-            <option value="Design & Creative">Design & Creative</option>
+            <option value="Design & Creative">Design &amp; Creative</option>
             <option value="Marketing">Marketing</option>
             <option value="Business Development">Business Development</option>
           </select>
@@ -320,6 +377,8 @@ export default function InternshipFeedPage() {
             const isSaved = savedJobLinks.has(job.applyLink);
             const isApplied = appliedJobLinks.has(job.applyLink);
             const isWorking = actionInProgress[job.id] || false;
+            const colors = SOURCE_COLORS[job.source];
+
             
             return (
               <Card 
@@ -327,22 +386,17 @@ export default function InternshipFeedPage() {
                 className="group rounded-2xl border border-border bg-card/30 hover:bg-card/50 hover:border-border/80 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex flex-col justify-between overflow-hidden"
               >
                 {/* Visual Header / Brand Indicator */}
-                <div className={cn(
-                  "h-1.5 w-full",
-                  job.source === 'linkedin' && "bg-blue-600",
-                  job.source === 'internshala' && "bg-orange-500",
-                  job.source === 'unstop' && "bg-purple-600"
-                )} />
+                <div className={cn("h-1.5 w-full", colors.bar)} />
 
                 <CardHeader className="space-y-1.5 pb-3">
                   <div className="flex items-center justify-between">
-                    <span className={cn(
-                      "text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border",
-                      job.source === 'linkedin' && "bg-blue-600/10 text-blue-600 border-blue-600/25",
-                      job.source === 'internshala' && "bg-orange-500/10 text-orange-600 border-orange-500/25",
-                      job.source === 'unstop' && "bg-purple-600/10 text-purple-600 border-purple-600/25"
-                    )}>
-                      {job.source}
+                    <span
+                      className={cn(
+                        "text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border flex items-center gap-1",
+                        colors.badge
+                      )}
+                    >
+                      <span>{colors.label}</span>
                     </span>
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
@@ -393,6 +447,25 @@ export default function InternshipFeedPage() {
                       </span>
                     )}
                   </div>
+
+                  {/* Single button for the source platform that originally posted this job */}
+                  <div className="pt-2">
+                    <a
+                      href={job.applyLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => { e.preventDefault(); window.open(job.applyLink, '_blank'); }}
+                      className={cn(
+                        "w-full inline-flex items-center justify-center gap-2 text-xs font-bold px-3 py-2.5 rounded-lg border hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer",
+                        job.source === 'linkedin' && "bg-blue-600/10 text-blue-500 border-blue-500/25 hover:bg-blue-600/20",
+                        job.source === 'internshala' && "bg-orange-500/10 text-orange-500 border-orange-500/25 hover:bg-orange-500/20",
+                        job.source === 'unstop' && "bg-purple-600/10 text-purple-500 border-purple-500/25 hover:bg-purple-600/20"
+                      )}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      View on {colors.label}
+                    </a>
+                  </div>
                 </CardContent>
 
                 <CardFooter className="border-t border-border/50 bg-muted/5 px-6 py-4 flex gap-2 justify-between">
@@ -427,7 +500,7 @@ export default function InternshipFeedPage() {
                     )}
                   </Button>
 
-                  {/* Apply Action */}
+                  {/* Apply Action — links to actual job application page */}
                   <Button
                     onClick={() => {
                       handleTrackingAction(job, 'Applied');
@@ -447,6 +520,27 @@ export default function InternshipFeedPage() {
         </div>
       )}
 
+      {/* Pagination Load More Button */}
+      {listings.length > 0 && hasMore && (
+        <div className="flex justify-center pt-8">
+          <Button
+            onClick={loadNextPage}
+            disabled={isFetchingMore}
+            variant="outline"
+            className="rounded-xl px-8 py-2.5 font-semibold cursor-pointer shadow-sm flex items-center gap-2 hover:bg-accent/80 transition-all duration-200"
+          >
+            {isFetchingMore ? (
+              <>
+                <Loader2 className="h-4.5 w-4.5 animate-spin" />
+                <span>Loading more...</span>
+              </>
+            ) : (
+              <span>Load More Opportunities</span>
+            )}
+          </Button>
+        </div>
+      )}
+
       {/* Details Side Drawer Component */}
       {selectedJob && (
         <>
@@ -461,13 +555,13 @@ export default function InternshipFeedPage() {
             {/* Drawer Header */}
             <div className="p-6 border-b border-border/80 flex items-start justify-between">
               <div className="space-y-1">
-                <span className={cn(
-                  "text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border",
-                  selectedJob.source === 'linkedin' && "bg-blue-600/10 text-blue-600 border-blue-600/25",
-                  selectedJob.source === 'internshala' && "bg-orange-500/10 text-orange-600 border-orange-500/25",
-                  selectedJob.source === 'unstop' && "bg-purple-600/10 text-purple-600 border-purple-600/25"
-                )}>
-                  {selectedJob.source} Opportunity
+                <span
+                  className={cn(
+                    "text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border inline-flex items-center gap-1",
+                    SOURCE_COLORS[selectedJob.source].badge
+                  )}
+                >
+                  <span>{SOURCE_COLORS[selectedJob.source].label}</span>
                 </span>
                 <h2 className="text-xl font-extrabold text-foreground tracking-tight mt-2">
                   {selectedJob.title}
@@ -533,6 +627,38 @@ export default function InternshipFeedPage() {
                 </div>
               </div>
 
+              {/* Single button — only the source platform */}
+              {(() => {
+                const drawerColors = SOURCE_COLORS[selectedJob.source];
+                return (
+                  <button
+                    type="button"
+                    onClick={() => window.open(selectedJob.applyLink, '_blank')}
+                    className={cn(
+                      "w-full flex items-center justify-center gap-3 p-4 rounded-xl border-2 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer",
+                      selectedJob.source === 'linkedin' && "border-blue-500/30 bg-blue-600/5 hover:bg-blue-600/15",
+                      selectedJob.source === 'internshala' && "border-orange-500/30 bg-orange-500/5 hover:bg-orange-500/15",
+                      selectedJob.source === 'unstop' && "border-purple-500/30 bg-purple-600/5 hover:bg-purple-600/15"
+                    )}
+                  >
+                    <ExternalLink className={cn(
+                      "h-5 w-5",
+                      selectedJob.source === 'linkedin' && "text-blue-500",
+                      selectedJob.source === 'internshala' && "text-orange-500",
+                      selectedJob.source === 'unstop' && "text-purple-500"
+                    )} />
+                    <span className={cn(
+                      "text-sm font-bold",
+                      selectedJob.source === 'linkedin' && "text-blue-500",
+                      selectedJob.source === 'internshala' && "text-orange-500",
+                      selectedJob.source === 'unstop' && "text-purple-500"
+                    )}>
+                      View on {drawerColors.label}
+                    </span>
+                  </button>
+                );
+              })()}
+
               {/* Quick Advisory Insight Hint */}
               <div className="rounded-xl bg-primary/5 border border-primary/10 p-4 flex gap-3 text-xs leading-normal">
                 <Sparkles className="h-5 w-5 text-primary shrink-0 mt-0.5" />
@@ -578,7 +704,7 @@ export default function InternshipFeedPage() {
                 )}
               </Button>
 
-              {/* Direct Apply Button */}
+              {/* Direct Apply Button — opens the actual job application page */}
               <Button
                 onClick={() => {
                   handleTrackingAction(selectedJob, 'Applied');

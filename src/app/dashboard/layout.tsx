@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Navbar } from '@/components/layouts/navbar';
 import { Sidebar } from '@/components/layouts/sidebar';
 import Loading from '@/app/loading';
+import { ResumeUploadModal } from '@/components/shared/resume-upload-modal';
 
 export default function DashboardLayout({
   children,
@@ -11,17 +12,49 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [isAuthorized, setIsAuthorized] = React.useState<boolean | null>(null);
+  const [hasResume, setHasResume] = React.useState<boolean | null>(null);
+  const [skippedThisSession, setSkippedThisSession] = React.useState<boolean>(false);
+  const [userId, setUserId] = React.useState<string>('');
 
   React.useEffect(() => {
-    const checkSession = () => {
+    const checkSession = async () => {
       try {
-        const stored = window.localStorage.getItem('user');
+        const stored = window.sessionStorage.getItem('user');
         if (!stored) {
           window.location.replace('/sign-in');
-        } else {
-          setIsAuthorized(true);
+          return;
+        }
+
+        const user = JSON.parse(stored);
+        if (!user || !user.id) {
+          window.location.replace('/sign-in');
+          return;
+        }
+
+        setUserId(user.id);
+        setIsAuthorized(true);
+
+        // Fetch resume status from Database
+        try {
+          const res = await fetch(`/api/resume?userId=${user.id}`);
+          if (!res.ok) {
+            if (res.status === 404 || res.status === 401 || res.status === 403) {
+              window.sessionStorage.removeItem('user');
+              window.location.replace('/sign-in');
+              return;
+            }
+            console.warn('Backend API returned non-ok status:', res.status);
+            setHasResume(true); // Fallback to hide modal
+            return;
+          }
+          const data = await res.json();
+          setHasResume(data.hasResume);
+        } catch (dbError) {
+          console.warn('Backend API is offline. Starting local server is recommended:', dbError);
+          setHasResume(true); // Fallback to prevent blocking popup
         }
       } catch {
+        window.sessionStorage.removeItem('user');
         window.location.replace('/sign-in');
       }
     };
@@ -38,6 +71,8 @@ export default function DashboardLayout({
     return null;
   }
 
+  const showUploadModal = hasResume === false && !skippedThisSession;
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Navbar />
@@ -49,6 +84,15 @@ export default function DashboardLayout({
           </div>
         </main>
       </div>
+
+      {/* Database-Backed Resume Upload Modal Popup */}
+      <ResumeUploadModal
+        isOpen={showUploadModal}
+        userId={userId}
+        onSuccess={() => setHasResume(true)}
+        onSkip={() => setSkippedThisSession(true)}
+      />
     </div>
   );
 }
+

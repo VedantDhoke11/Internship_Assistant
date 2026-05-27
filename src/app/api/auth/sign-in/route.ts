@@ -33,6 +33,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
     }
 
+    // Check if the user has uploaded a resume
+    const resumeCount = await prisma.resume.count({
+      where: { userId: user.id },
+    });
+
     // Return authenticated user details
     return NextResponse.json({
       message: 'Login successful',
@@ -43,6 +48,7 @@ export async function POST(request: Request) {
         college: user.college,
         graduationYear: user.graduationYear,
         skills: user.skills,
+        hasResume: resumeCount > 0,
       },
     });
   } catch (error) {

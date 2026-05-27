@@ -1,4 +1,5 @@
 import { JobListing } from './types';
+import { fetchLiveJobsFromAPIs } from './liveFetcher';
 
 // ============================================================================
 // PRODUCTION INTEGRATION TEMPLATE (For Developer Reference)
@@ -118,10 +119,18 @@ const MOCK_LINKEDIN_JOBS: JobListing[] = [
   }
 ];
 
-export async function fetchLinkedInJobs(searchQuery?: string): Promise<JobListing[]> {
-  // Simulate network latency (250ms)
-  await new Promise((resolve) => setTimeout(resolve, 250));
+export async function fetchLinkedInJobs(searchQuery?: string, page: number = 1): Promise<JobListing[]> {
+  try {
+    const liveJobs = await fetchLiveJobsFromAPIs(searchQuery || '', page);
+    const filtered = liveJobs.filter((job) => job.source === 'linkedin');
+    if (filtered.length > 0) {
+      return filtered;
+    }
+  } catch (e) {
+    console.error('LinkedIn live fetch failed, falling back to mock:', e);
+  }
 
+  // Fallback to mock
   if (!searchQuery) {
     return MOCK_LINKEDIN_JOBS;
   }

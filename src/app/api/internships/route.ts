@@ -1,28 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { aggregateJobs, AggregatorFilter } from '@/services/jobs/aggregator';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q') || undefined;
-    const source = (searchParams.get('source') as 'linkedin' | 'internshala' | 'unstop' | 'all') || undefined;
-    const category = searchParams.get('category') || undefined;
-    const type = (searchParams.get('type') as 'Remote' | 'Hybrid' | 'On-site' | 'all') || undefined;
+    const query = searchParams.get('q') || '';
+    const source = searchParams.get('source') || 'all';
+    const category = searchParams.get('category') || 'all';
+    const type = searchParams.get('type') || 'all';
+    const page = searchParams.get('page') || '1';
 
-    const filters: AggregatorFilter = {
-      query,
-      source,
-      category,
-      type,
-    };
+    const params = new URLSearchParams();
+    if (query) params.append('q', query);
+    if (source) params.append('source', source);
+    if (category) params.append('category', category);
+    if (type) params.append('type', type);
+    if (page) params.append('page', page);
 
-    const listings = await aggregateJobs(filters);
-    return NextResponse.json({ listings });
+    const response = await fetch(`http://localhost:5000/api/internships?${params.toString()}`);
+    
+    if (!response.ok) {
+      const errText = await response.text();
+      return NextResponse.json({ error: `Backend error: ${errText}` }, { status: response.status });
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error: unknown) {
-    console.error('API /api/internships error:', error);
+    console.error('API /api/internships proxy error:', error);
     return NextResponse.json(
-      { error: 'Failed to aggregate internship listings.' },
-      { status: 500 }
+      { error: 'Python Flask backend is offline. Please make sure the backend server is running.' },
+      { status: 503 }
     );
   }
 }

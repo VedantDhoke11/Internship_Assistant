@@ -61,6 +61,7 @@ export async function POST(request: Request) {
           email: user.email,
           college: user.college,
           graduationYear: user.graduationYear,
+          hasResume: false,
         },
       },
       { status: 201 },

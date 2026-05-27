@@ -14,7 +14,7 @@ export default function SignInPage() {
   
   React.useEffect(() => {
     try {
-      const stored = window.localStorage.getItem('user');
+      const stored = window.sessionStorage.getItem('user');
       if (stored) {
         window.location.replace('/dashboard');
       }
@@ -70,8 +70,8 @@ export default function SignInPage() {
         return;
       }
 
-      // Store authenticated user in local storage
-      window.localStorage.setItem('user', JSON.stringify(data.user));
+      // Store authenticated user in session storage
+      window.sessionStorage.setItem('user', JSON.stringify(data.user));
       
       // Redirect to dashboard on success
       router.replace('/dashboard');
@@ -81,19 +81,35 @@ export default function SignInPage() {
     }
   };
 
-  const handleOAuthLogin = (provider: 'google' | 'github') => {
+  const handleOAuthLogin = async (provider: 'google' | 'github') => {
     setIsLoading(true);
-    console.log(`Mock sign in initiated using provider: ${provider}`);
-    setTimeout(() => {
+    try {
       const oauthUser = {
         name: provider === 'google' ? 'Google Student' : 'GitHub Developer',
         email: `student@${provider}.com`,
         college: 'OAuth Academy',
         graduationYear: 2027,
       };
-      window.localStorage.setItem('user', JSON.stringify(oauthUser));
-      router.replace('/dashboard');
-    }, 800);
+
+      const res = await fetch('/api/auth/oauth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(oauthUser),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        window.sessionStorage.setItem('user', JSON.stringify(data.user));
+        router.replace('/dashboard');
+      } else {
+        const data = await res.json();
+        setErrors({ general: data.error || 'OAuth authentication failed. Please try university email login.' });
+        setIsLoading(false);
+      }
+    } catch {
+      setErrors({ general: 'A connection error occurred during OAuth login.' });
+      setIsLoading(false);
+    }
   };
 
   return (

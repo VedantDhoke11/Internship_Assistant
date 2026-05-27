@@ -62,7 +62,7 @@ export default function DashboardPage() {
   React.useEffect(() => {
     const loadUser = () => {
       try {
-        const stored = window.localStorage.getItem('user');
+        const stored = window.sessionStorage.getItem('user');
         if (stored) {
           const parsed = JSON.parse(stored);
           if (parsed.name) setUserName(parsed.name.split(' ')[0]);
@@ -443,13 +443,13 @@ export default function DashboardPage() {
                     <div className="h-2 w-2 rounded-full bg-green-500" />
                     <span>Supabase Auth & Database</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse" />
-                    <span>Resume Intelligence (Coming soon)</span>
+                   <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-green-500" />
+                    <span>Resume Intelligence Analysis</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse" />
-                    <span>AI Career Advisor (Coming soon)</span>
+                    <div className="h-2 w-2 rounded-full bg-green-500" />
+                    <span>AI Career Advisor Assistant</span>
                   </div>
                 </CardContent>
               </Card>

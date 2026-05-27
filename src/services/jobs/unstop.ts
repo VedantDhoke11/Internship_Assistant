@@ -1,4 +1,5 @@
 import { JobListing } from './types';
+import { fetchLiveJobsFromAPIs } from './liveFetcher';
 
 // ============================================================================
 // PRODUCTION JSON INTERCEPTION TEMPLATE (For Developer Reference)
@@ -128,10 +129,18 @@ const MOCK_UNSTOP_JOBS: JobListing[] = [
   }
 ];
 
-export async function fetchUnstopJobs(searchQuery?: string): Promise<JobListing[]> {
-  // Simulate network latency (250ms)
-  await new Promise((resolve) => setTimeout(resolve, 250));
+export async function fetchUnstopJobs(searchQuery?: string, page: number = 1): Promise<JobListing[]> {
+  try {
+    const liveJobs = await fetchLiveJobsFromAPIs(searchQuery || '', page);
+    const filtered = liveJobs.filter((job) => job.source === 'unstop');
+    if (filtered.length > 0) {
+      return filtered;
+    }
+  } catch (e) {
+    console.error('Unstop live fetch failed, falling back to mock:', e);
+  }
 
+  // Fallback to mock
   if (!searchQuery) {
     return MOCK_UNSTOP_JOBS;
   }

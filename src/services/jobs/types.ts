@@ -11,4 +11,6 @@ export interface JobListing {
   type: 'Remote' | 'Hybrid' | 'On-site';
   category: string;
   postedAt: string;
+  /** The actual origin API that this listing was fetched from */
+  originApi?: 'arbeitnow' | 'himalayas' | 'greenhouse';
 }
